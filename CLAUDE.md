@@ -16,6 +16,7 @@ Build the first version around one reliable happy path:
 - PostgreSQL runbook storage with hybrid retrieval
 - SSE stream for visible reasoning
 - Manual runbook review page
+- No A2A in MVP; keep orchestration inside LangGraph until the baseline is proven
 
 This still demonstrates multi-agent orchestration, tool use, retrieval, and product thinking without forcing full production complexity.
 
@@ -39,11 +40,77 @@ Keep all remediation commands simulated. That keeps the system safe while still 
 
 ## Delivery Plan
 
-1. Infrastructure and data: Docker Compose, schema, Redis, seed scripts
-2. Retrieval and tools: embeddings, hybrid search, MCP tool layer
-3. Agent workflow: triage, diagnostic, postmortem, then remediation
-4. Product layer: dashboard, stream viewer, runbook review, auth polish
-5. Evaluation and polish: RAG test script, latency checks, LangSmith traces
+1. Infrastructure and data: Docker Compose, schema, PostgreSQL, Redis, seed scripts
+2. Redis layer: diagnosis cache, rate limiter, Redis Streams for cross-service event passing
+3. Retrieval and tools: embeddings, hybrid search, MCP tool layer
+4. Agent workflow: triage, diagnostic, postmortem, then remediation (LangGraph StateGraph)
+5. Streaming: Redis Streams → SSE bridge, Java SSE proxy for frontend
+6. Product layer: dashboard, stream viewer, runbook review, auth polish
+7. Evaluation and polish: RAG test script, latency checks, LangSmith traces
+8. A2A spike only after the LangGraph baseline is stable and measurable
+
+## Redis Strategy
+
+Redis serves three distinct roles in this project. All three should be wired early because they underpin cross-service communication and agent performance.
+
+### 1. Diagnosis Cache
+
+Cache LLM diagnostic results keyed by alert fingerprint (rule_name + labels hash). When the same alert fires again within TTL, return cached diagnosis instead of re-running the full agent pipeline. This saves LLM cost and reduces latency for repeat incidents.
+
+- Module: `backend-python/cache/diagnosis_cache.py`
+- Key pattern: `diag:{alert_fingerprint}`
+- TTL: configurable, default 30 minutes
+
+### 2. Rate Limiter
+
+Token-bucket or sliding-window rate limiter on LLM API calls to prevent cost blowout during burst alert scenarios.
+
+- Module: `backend-python/cache/rate_limiter.py`
+- Key pattern: `ratelimit:llm:{window}`
+
+### 3. Redis Streams (Cross-Service Event Bus)
+
+This is the most important Redis role. Redis Streams connect the Python agent service to the Java API layer:
+
+- Python agent publishes step-by-step events (triage started, diagnostic tool called, postmortem generated) to a Redis Stream
+- Java backend consumes the stream and proxies events to the frontend via SSE
+- This decouples agent execution from the API layer — the agent does not need to know about SSE or frontend connections
+
+Flow: `LangGraph node → Redis Stream → Java StreamController → SSE → Frontend`
+
+- Publisher: `backend-java/RedisStreamPublisher.java` (Java→Redis) and `backend-python/workers/stream_consumer.py` (Python→Redis)
+- Stream key: `alerts:{alert_id}:events`
+- Consumer group: `runbook-api-group`
+
+### When to Wire Redis
+
+Redis should be set up in **Step 1-2** of the delivery plan, not deferred. Reasons:
+
+- SSE streaming depends on Redis Streams as the transport layer between Python and Java
+- Diagnosis cache must be in place before agent pipeline testing to get realistic latency numbers
+- Rate limiter should be active before any LLM calls go live to avoid accidental cost spikes
+
+## A2A Adoption Plan
+
+A2A should be treated as a phase-two experiment, not a foundation requirement. The project should first prove that one FastAPI service can run the full LangGraph workflow reliably. Introducing A2A earlier would add protocol and coordination complexity before the baseline behavior is understood.
+
+### When to Prompt for A2A
+
+Explicitly raise the A2A question when all of these conditions are true:
+
+- LangGraph runs end to end for at least 3 alert scenarios without manual intervention
+- Redis Streams and SSE show complete node-level traces across the workflow
+- At least one integration test passes for `alert -> diagnosis -> remediation or postmortem -> runbook draft`
+- Tool boundaries are stable enough that specialist agents would have clean responsibilities
+- Basic latency and token usage have been measured, so A2A overhead can be compared against a known baseline
+
+### What the A2A Spike Should Test
+
+- Whether diagnostic, remediation, and runbook review agents benefit from explicit agent-to-agent handoffs
+- Whether A2A improves modularity more than it hurts latency and implementation complexity
+- Whether cross-agent contracts are clearer than the current shared-state LangGraph design
+
+If the trigger conditions are met, that is the point to remind you to try A2A. Before that point, the correct default is: keep the workflow in LangGraph and avoid introducing another orchestration layer.
 
 ## Recommendation
 

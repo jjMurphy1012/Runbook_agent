@@ -26,6 +26,8 @@ Planned agent flow:
 3. Remediation proposes or simulates recovery actions.
 4. Postmortem creates or updates a runbook for review.
 
+For the first milestone, all coordination stays inside LangGraph. A2A (Agent-to-Agent) is intentionally deferred until the baseline workflow is stable.
+
 ## Repository Layout
 
 ```text
@@ -61,3 +63,19 @@ docker-compose up --build
 - Wire Redis Streams and SSE end to end
 - Build alert dashboard and runbook review workflow
 - Add integration tests and seeded demo scenarios
+
+## A2A Adoption Gate
+
+A2A should be evaluated only after the LangGraph baseline is working. The point to explicitly prompt for an A2A spike is when all of the following are true:
+
+- The LangGraph pipeline runs end to end for at least 3 alert scenarios
+- Redis Streams and SSE show stable step-by-step agent traces
+- At least one integration test covers `alert -> diagnosis -> postmortem -> runbook draft`
+- Agent boundaries are clear enough to split into separate contracts, such as diagnostic specialist, remediation specialist, and runbook reviewer
+
+When these conditions are met, open an A2A experiment branch and compare two designs:
+
+- current single-service LangGraph orchestration
+- A2A handoff between specialized agents with explicit message contracts
+
+Until then, keep the architecture simpler and finish the LangGraph baseline first.
