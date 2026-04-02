@@ -1,0 +1,7 @@
+[
+  {
+    "command_pattern": "systemctl restart service-a",
+    "success": true,
+    "response_message": "Simulated restart completed."
+  }
+]

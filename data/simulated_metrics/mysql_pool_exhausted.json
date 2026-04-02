@@ -1,0 +1,9 @@
+[
+  {
+    "metric_name": "db_pool_usage",
+    "data_points": [
+      { "time": "09:25", "value": 82 },
+      { "time": "09:30", "value": 96 }
+    ]
+  }
+]

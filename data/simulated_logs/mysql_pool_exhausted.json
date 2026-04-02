@@ -1,0 +1,8 @@
+[
+  {
+    "timestamp": "2026-04-02T09:30:00Z",
+    "level": "ERROR",
+    "service": "service-a",
+    "message": "Connection pool usage at 96% (48/50)"
+  }
+]
