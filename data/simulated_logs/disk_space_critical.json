@@ -1,0 +1,38 @@
+[
+  {
+    "timestamp": "2026-04-02T03:00:00Z",
+    "level": "WARN",
+    "service": "log-aggregator",
+    "message": "Disk usage on /data volume at 80% (160GB/200GB)"
+  },
+  {
+    "timestamp": "2026-04-02T06:00:00Z",
+    "level": "WARN",
+    "service": "log-aggregator",
+    "message": "Disk usage on /data volume at 88% (176GB/200GB), growth rate 5GB/hr"
+  },
+  {
+    "timestamp": "2026-04-02T08:00:00Z",
+    "level": "ERROR",
+    "service": "log-aggregator",
+    "message": "Disk usage on /data volume at 95% (190GB/200GB), log rotation failed: no space for compressed archive"
+  },
+  {
+    "timestamp": "2026-04-02T08:15:00Z",
+    "level": "ERROR",
+    "service": "log-aggregator",
+    "message": "Write failed: No space left on device — /data/logs/app-2026-04-02.log"
+  },
+  {
+    "timestamp": "2026-04-02T08:16:00Z",
+    "level": "ERROR",
+    "service": "postgres",
+    "message": "PANIC: could not write to WAL file — pg_wal on same volume /data, disk full"
+  },
+  {
+    "timestamp": "2026-04-02T08:16:30Z",
+    "level": "FATAL",
+    "service": "postgres",
+    "message": "Database shutting down due to WAL write failure"
+  }
+]

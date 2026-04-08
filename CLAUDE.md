@@ -1,117 +1,151 @@
 # RunbookAgent Project
 
-## Feasibility Verdict
+## Verdict
 
-This project is feasible as a portfolio or resume project if it is treated as a demo-grade AIOps platform, not a production-grade incident automation system. The strongest value is the end-to-end story: alert intake, agent-driven diagnosis, simulated remediation, runbook generation, and human review in one workflow.
+Feasible as a demo-grade AIOps portfolio project, not a production incident system. The value is the end-to-end story: alert intake, agent-driven diagnosis, simulated remediation, runbook generation, and human review in one workflow. Main risk is scope — three runtimes, two backends, SSE, Redis Streams, RAG, MCP tools, and evaluation can overwhelm a single developer if built all at once. Keep the first milestone narrow.
 
-The current design is technically coherent. Spring Boot owns business APIs and auth, FastAPI owns agent orchestration and RAG, Redis handles cache and streams, and PostgreSQL stores business data plus pgvector retrieval. That separation makes sense. The main risk is not architecture correctness, but scope. Three runtimes, two backends, SSE streaming, Redis Streams, RAG, MCP tools, and evaluation can become too much if everything is built at once.
+## MVP Scope
 
-## Recommended MVP
-
-Build the first version around one reliable happy path:
-
-- 3 alert scenarios instead of 6
-- FastAPI LangGraph pipeline with Triage -> Diagnostic -> Postmortem first
-- Simulated remediation only after diagnosis is stable
-- PostgreSQL runbook storage with hybrid retrieval
+- 3 alert scenarios
+- LangGraph pipeline: Triage → Diagnostic (Reflection mode) → Postmortem, then Remediation
+- PostgreSQL runbook storage with hybrid retrieval (pgvector + tsvector + RRF)
 - SSE stream for visible reasoning
 - Manual runbook review page
-- No A2A in MVP; keep orchestration inside LangGraph until the baseline is proven
+- All remediation commands simulated
 
-This still demonstrates multi-agent orchestration, tool use, retrieval, and product thinking without forcing full production complexity.
-
-## Suggested Architecture Snapshot
+## Architecture
 
 - `frontend/`: React + TypeScript dashboard, agent panel, runbook review
-- `backend-java/`: auth, CRUD, session, alert lifecycle, SSE proxy
+- `backend-java/`: JWT auth (stateless), CRUD, alert lifecycle, SSE proxy
 - `backend-python/`: LangGraph workflow, MCP tools, RAG, streaming, workers
-- `scripts/`: seed data and evaluation scripts
+- `scripts/`: seed data and evaluation
 - `data/`: simulated logs, metrics, runbooks, command responses
-
-Keep all remediation commands simulated. That keeps the system safe while still showing agent decision quality.
-
-## Main Delivery Risks
-
-- Integration overhead across Java, Python, Redis, PostgreSQL, and frontend
-- Unclear boundaries between business API and agent service
-- RAG quality tuning taking longer than expected
-- Redis Streams and SSE consistency bugs during long-running flows
-- Evaluation scope expanding beyond the core demo
 
 ## Delivery Plan
 
-1. Infrastructure and data: Docker Compose, schema, PostgreSQL, Redis, seed scripts
-2. Redis layer: diagnosis cache, rate limiter, Redis Streams for cross-service event passing
-3. Retrieval and tools: embeddings, hybrid search, MCP tool layer
-4. Agent workflow: triage, diagnostic, postmortem, then remediation (LangGraph StateGraph)
-5. Streaming: Redis Streams → SSE bridge, Java SSE proxy for frontend
-6. Product layer: dashboard, stream viewer, runbook review, auth polish
-7. Evaluation and polish: RAG test script, latency checks, LangSmith traces
-8. A2A spike only after the LangGraph baseline is stable and measurable
+1. Infrastructure: Docker Compose, PostgreSQL schema, Redis, seed scripts
+2. Retrieval and tools: embeddings, hybrid search, MCP tool layer
+3. Agent workflow: triage, diagnostic (reflection), postmortem, remediation
+4. Streaming: Redis Streams → Java SSE proxy → frontend
+5. Product layer: dashboard, stream viewer, runbook review, auth
+6. Evaluation: RAG test script, latency checks, LangSmith traces
+
+## Main Risks
+
+- Cross-service integration (Java ↔ Python ↔ Redis ↔ Postgres)
+- RAG quality tuning taking longer than expected
+- Redis Streams and SSE consistency during long-running flows
 
 ## Redis Strategy
 
-Redis serves three distinct roles in this project. All three should be wired early because they underpin cross-service communication and agent performance.
+Redis serves three roles. All should be wired in step 1 because they underpin cross-service communication and agent performance.
 
 ### 1. Diagnosis Cache
 
-Cache LLM diagnostic results keyed by alert fingerprint (rule_name + labels hash). When the same alert fires again within TTL, return cached diagnosis instead of re-running the full agent pipeline. This saves LLM cost and reduces latency for repeat incidents.
+Cache LLM diagnostic results keyed by alert fingerprint (rule_name + labels hash). Same alert within TTL returns cached diagnosis instead of re-running the pipeline.
 
 - Module: `backend-python/cache/diagnosis_cache.py`
-- Key pattern: `diag:{alert_fingerprint}`
-- TTL: configurable, default 30 minutes
+- Key: `diag:{alert_fingerprint}`
+- TTL: default 30 minutes
 
 ### 2. Rate Limiter
 
-Token-bucket or sliding-window rate limiter on LLM API calls to prevent cost blowout during burst alert scenarios.
+Sliding-window limiter on LLM API calls to prevent cost blowout during burst alerts.
 
 - Module: `backend-python/cache/rate_limiter.py`
-- Key pattern: `ratelimit:llm:{window}`
+- Key: `ratelimit:llm:{window}`
 
-### 3. Redis Streams (Cross-Service Event Bus)
+### 3. Redis Streams (Event Bus)
 
-This is the most important Redis role. Redis Streams connect the Python agent service to the Java API layer:
-
-- Python agent publishes step-by-step events (triage started, diagnostic tool called, postmortem generated) to a Redis Stream
-- Java backend consumes the stream and proxies events to the frontend via SSE
-- This decouples agent execution from the API layer — the agent does not need to know about SSE or frontend connections
+Python agent publishes per-step events to a Redis Stream. Java consumes and proxies to frontend via SSE. This decouples agent execution from the API layer.
 
 Flow: `LangGraph node → Redis Stream → Java StreamController → SSE → Frontend`
 
-- Publisher: `backend-java/RedisStreamPublisher.java` (Java→Redis) and `backend-python/workers/stream_consumer.py` (Python→Redis)
+- Publishers: `backend-java/RedisStreamPublisher.java`, `backend-python/workers/stream_consumer.py`
 - Stream key: `alerts:{alert_id}:events`
 - Consumer group: `runbook-api-group`
 
-### When to Wire Redis
+## Diagnostic Reflection Mode
 
-Redis should be set up in **Step 1-2** of the delivery plan, not deferred. Reasons:
+The diagnostic stage uses an Analyzer + Critic loop instead of a single-pass LLM call. This is the project's main differentiator.
 
-- SSE streaming depends on Redis Streams as the transport layer between Python and Java
-- Diagnosis cache must be in place before agent pipeline testing to get realistic latency numbers
-- Rate limiter should be active before any LLM calls go live to avoid accidental cost spikes
+A preset "bull vs bear" debate requires hardcoding opposing stances per alert type, does not generalize, and risks excluding the correct root cause. Reflection avoids this: the Analyzer freely diagnoses, and the Critic may point to any alternative direction — including ones the Analyzer never considered.
 
-## A2A Adoption Plan
+### Structure
 
-A2A should be treated as a phase-two experiment, not a foundation requirement. The project should first prove that one FastAPI service can run the full LangGraph workflow reliably. Introducing A2A earlier would add protocol and coordination complexity before the baseline behavior is understood.
+```
+Evidence → Analyzer → Critic → (converged?) → Finalizer
+              ↑___________________|
+                  loop, max 3 rounds
+```
 
-### When to Prompt for A2A
+- **Analyzer**: Free-form diagnosis. First round unbiased. Later rounds see Critic feedback and may accept, reject, or partially revise.
+- **Critic**: Reviews the analysis against the full evidence (not just the analysis text). Flags missed evidence, logic gaps, alternative hypotheses, correlation-vs-causation errors. Severity-graded.
+- **Finalizer**: Synthesizes final diagnosis from all rounds after convergence.
 
-Explicitly raise the A2A question when all of these conditions are true:
+### Convergence
 
-- LangGraph runs end to end for at least 3 alert scenarios without manual intervention
-- Redis Streams and SSE show complete node-level traces across the workflow
-- At least one integration test passes for `alert -> diagnosis -> remediation or postmortem -> runbook draft`
-- Tool boundaries are stable enough that specialist agents would have clean responsibilities
-- Basic latency and token usage have been measured, so A2A overhead can be compared against a known baseline
+Loop ends when any of:
 
-### What the A2A Spike Should Test
+- Critic reports no major or critical issues
+- Two consecutive rounds produce substantially identical analyses
+- `max_rounds=3` reached
 
-- Whether diagnostic, remediation, and runbook review agents benefit from explicit agent-to-agent handoffs
-- Whether A2A improves modularity more than it hurts latency and implementation complexity
-- Whether cross-agent contracts are clearer than the current shared-state LangGraph design
+### Prompt Guardrails
 
-If the trigger conditions are met, that is the point to remind you to try A2A. Before that point, the correct default is: keep the workflow in LangGraph and avoid introducing another orchestration layer.
+- Analyzer may reject Critic feedback with justification (prevents sycophantic collapse)
+- Critic minor issues do not block convergence (prevents infinite nitpicking)
+- Critic must cite specific evidence when proposing alternatives (prevents hand-waving)
 
-## Recommendation
+### Cost Control
 
-Proceed with the project, but keep the first milestone narrow. If the MVP works reliably for 3 scenarios with visible agent traces and reviewable runbook output, it is already strong enough to document and demo.
+Reflection mode runs only when Triage flags `severity=HIGH` or `ambiguity_score>0.5`. Other alerts use single-pass diagnostic. Each reflection round's output is pushed as a distinct SSE event so the frontend renders the iteration as a visible conversation.
+
+## Incident Memory
+
+Long-term semantic memory of past incidents. Distinct from Diagnosis Cache (short-term exact-match shortcut) and static Seed Runbooks (hand-curated theoretical knowledge). Memory captures actual past decisions and feeds them to the Analyzer as prior context.
+
+### Schema
+
+```sql
+CREATE TABLE incident_history (
+  id UUID PRIMARY KEY,
+  alert_fingerprint VARCHAR(128),
+  rule_name VARCHAR(100),
+  category VARCHAR(30),
+  severity VARCHAR(10),
+  alert_payload JSONB,
+  diagnosis TEXT,
+  root_cause VARCHAR(200),
+  runbook_id UUID REFERENCES runbooks(id),
+  outcome VARCHAR(20),        -- resolved | false_positive | escalated | unknown
+  human_verified BOOLEAN,
+  embedding VECTOR(1536),     -- embedded from alert_payload
+  created_at TIMESTAMPTZ
+);
+```
+
+### Write Path
+
+After Postmortem completes, insert the record with `human_verified=false`. When a reviewer approves the runbook on the review page, flip `human_verified=true`. Both verified and unverified records are stored; retrieval filters by `human_verified=true` only.
+
+### Read Path
+
+Triggered at the start of Diagnostic Reflection, after Evidence Collection and before the first Analyzer round. Retrieves top-3 semantically similar past incidents via pgvector cosine similarity on `alert_payload` embedding. Results are auto-injected into the Analyzer prompt — not exposed as an MCP tool, not shown to the Critic.
+
+### Anchoring Prevention
+
+The Analyzer prompt explicitly marks historical context as "reference only" and requires the Analyzer to state why the current situation differs if its diagnosis diverges from history. Critic never sees memory context — this keeps the Critic's challenges evidence-driven rather than history-driven.
+
+### Cold Start
+
+Seed 3-5 hand-written verified cases (one per MVP scenario) at install time. This gives Memory non-trivial behavior from day one.
+
+## Auth Strategy
+
+Stateless JWT. Spring Session removed; Redis is reserved for cache and streams only.
+
+- Login/register endpoints issue signed JWT tokens
+- All API requests carry `Authorization: Bearer <token>`
+- Spring Security configured with `SessionCreationPolicy.STATELESS`
+- `spring-session-data-redis` removed from pom.xml

@@ -1,7 +1,56 @@
 [
   {
-    "command_pattern": "systemctl restart service-a",
+    "command_pattern": "SHOW FULL PROCESSLIST",
+    "scenario": "mysql_pool_exhausted",
     "success": true,
-    "response_message": "Simulated restart completed."
+    "response_message": "Id: 142, User: app, Host: 10.0.1.5, db: orders, Command: Query, Time: 245, State: Sending data, Info: SELECT * FROM orders WHERE status='pending'\nId: 143, User: app, Host: 10.0.1.5, db: orders, Command: Sleep, Time: 180\nId: 144, User: app, Host: 10.0.1.6, db: orders, Command: Query, Time: 120, State: Locked"
+  },
+  {
+    "command_pattern": "KILL 142",
+    "scenario": "mysql_pool_exhausted",
+    "success": true,
+    "response_message": "Simulated: Process 142 terminated. Long-running query on orders table killed."
+  },
+  {
+    "command_pattern": "systemctl restart service-a",
+    "scenario": "mysql_pool_exhausted",
+    "success": true,
+    "response_message": "Simulated: service-a restarted. Connection pool reset to 0/50 active connections."
+  },
+  {
+    "command_pattern": "kubectl scale deployment payment-service --replicas=4",
+    "scenario": "cpu_high_load",
+    "success": true,
+    "response_message": "Simulated: deployment.apps/payment-service scaled to 4 replicas."
+  },
+  {
+    "command_pattern": "kubectl rollout restart deployment payment-service",
+    "scenario": "cpu_high_load",
+    "success": true,
+    "response_message": "Simulated: deployment.apps/payment-service restarting. Rolling update in progress."
+  },
+  {
+    "command_pattern": "jstack 1",
+    "scenario": "cpu_high_load",
+    "success": true,
+    "response_message": "Simulated thread dump:\n\"TransactionProcessor-12\" BLOCKED on java.util.concurrent.locks.ReentrantLock\n\"TransactionProcessor-15\" BLOCKED on java.util.concurrent.locks.ReentrantLock\n\"GC task thread#0\" RUNNABLE"
+  },
+  {
+    "command_pattern": "find /data/logs -mtime +7 -delete",
+    "scenario": "disk_space_critical",
+    "success": true,
+    "response_message": "Simulated: Deleted 47 log files older than 7 days, freed 28GB."
+  },
+  {
+    "command_pattern": "du -sh /data/*",
+    "scenario": "disk_space_critical",
+    "success": true,
+    "response_message": "120G\t/data/logs\n45G\t/data/pg_wal\n18G\t/data/backups\n5G\t/data/tmp"
+  },
+  {
+    "command_pattern": "CHECKPOINT",
+    "scenario": "disk_space_critical",
+    "success": true,
+    "response_message": "Simulated: PostgreSQL CHECKPOINT completed. WAL segments eligible for removal."
   }
 ]

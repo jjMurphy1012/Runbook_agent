@@ -1,0 +1,45 @@
+[
+  {
+    "metric_name": "cpu_usage_percent",
+    "unit": "percent",
+    "data_points": [
+      {"time": "13:50", "value": 42},
+      {"time": "14:00", "value": 78},
+      {"time": "14:05", "value": 88},
+      {"time": "14:08", "value": 95},
+      {"time": "14:10", "value": 98},
+      {"time": "14:12", "value": 99}
+    ]
+  },
+  {
+    "metric_name": "jvm_gc_pause_ms",
+    "unit": "milliseconds",
+    "data_points": [
+      {"time": "13:50", "value": 45},
+      {"time": "14:00", "value": 180},
+      {"time": "14:05", "value": 850},
+      {"time": "14:08", "value": 2100},
+      {"time": "14:10", "value": 3500}
+    ]
+  },
+  {
+    "metric_name": "http_request_latency_p99_ms",
+    "unit": "milliseconds",
+    "data_points": [
+      {"time": "13:50", "value": 200},
+      {"time": "14:00", "value": 1500},
+      {"time": "14:08", "value": 12000},
+      {"time": "14:10", "value": 30000}
+    ]
+  },
+  {
+    "metric_name": "jvm_heap_usage_percent",
+    "unit": "percent",
+    "data_points": [
+      {"time": "13:50", "value": 55},
+      {"time": "14:00", "value": 72},
+      {"time": "14:05", "value": 89},
+      {"time": "14:10", "value": 94}
+    ]
+  }
+]

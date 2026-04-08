@@ -1,0 +1,38 @@
+[
+  {
+    "timestamp": "2026-04-02T14:00:00Z",
+    "level": "WARN",
+    "service": "payment-service",
+    "message": "CPU usage at 78% — above normal baseline of 40%"
+  },
+  {
+    "timestamp": "2026-04-02T14:05:00Z",
+    "level": "WARN",
+    "service": "payment-service",
+    "message": "GC pause time increased to 850ms, heap usage at 89%"
+  },
+  {
+    "timestamp": "2026-04-02T14:08:00Z",
+    "level": "ERROR",
+    "service": "payment-service",
+    "message": "CPU usage at 95%, request latency p99 spiked to 12s"
+  },
+  {
+    "timestamp": "2026-04-02T14:10:00Z",
+    "level": "ERROR",
+    "service": "payment-service",
+    "message": "CPU usage at 98%, multiple threads in BLOCKED state, possible deadlock in TransactionProcessor"
+  },
+  {
+    "timestamp": "2026-04-02T14:12:00Z",
+    "level": "ERROR",
+    "service": "payment-service",
+    "message": "Health check failing: /actuator/health returning 503, pod marked NotReady"
+  },
+  {
+    "timestamp": "2026-04-02T14:12:30Z",
+    "level": "WARN",
+    "service": "gateway",
+    "message": "Circuit breaker OPEN for payment-service, requests being short-circuited"
+  }
+]

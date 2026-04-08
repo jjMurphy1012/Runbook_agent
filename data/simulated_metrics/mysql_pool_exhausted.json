@@ -1,9 +1,42 @@
 [
   {
-    "metric_name": "db_pool_usage",
+    "metric_name": "db_pool_active_connections",
+    "unit": "count",
     "data_points": [
-      { "time": "09:25", "value": 82 },
-      { "time": "09:30", "value": 96 }
+      {"time": "09:20", "value": 30},
+      {"time": "09:22", "value": 35},
+      {"time": "09:25", "value": 41},
+      {"time": "09:27", "value": 44},
+      {"time": "09:28", "value": 46},
+      {"time": "09:30", "value": 48}
+    ]
+  },
+  {
+    "metric_name": "db_pool_max_connections",
+    "unit": "count",
+    "data_points": [
+      {"time": "09:20", "value": 50},
+      {"time": "09:30", "value": 50}
+    ]
+  },
+  {
+    "metric_name": "db_query_duration_p99_ms",
+    "unit": "milliseconds",
+    "data_points": [
+      {"time": "09:20", "value": 120},
+      {"time": "09:25", "value": 850},
+      {"time": "09:27", "value": 4200},
+      {"time": "09:30", "value": 8500}
+    ]
+  },
+  {
+    "metric_name": "http_request_errors_5xx",
+    "unit": "count/min",
+    "data_points": [
+      {"time": "09:20", "value": 0},
+      {"time": "09:25", "value": 2},
+      {"time": "09:28", "value": 15},
+      {"time": "09:30", "value": 48}
     ]
   }
 ]

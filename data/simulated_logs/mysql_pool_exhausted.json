@@ -1,8 +1,38 @@
 [
   {
+    "timestamp": "2026-04-02T09:25:00Z",
+    "level": "WARN",
+    "service": "service-a",
+    "message": "Connection pool usage rising: 82% (41/50)"
+  },
+  {
+    "timestamp": "2026-04-02T09:27:00Z",
+    "level": "WARN",
+    "service": "service-a",
+    "message": "Slow query detected: SELECT * FROM orders WHERE status='pending' — 4.2s"
+  },
+  {
+    "timestamp": "2026-04-02T09:28:30Z",
+    "level": "ERROR",
+    "service": "service-a",
+    "message": "Connection pool usage at 92% (46/50), connections waiting: 12"
+  },
+  {
     "timestamp": "2026-04-02T09:30:00Z",
     "level": "ERROR",
     "service": "service-a",
-    "message": "Connection pool usage at 96% (48/50)"
+    "message": "Connection pool usage at 96% (48/50), connection acquire timeout: 3 requests failed"
+  },
+  {
+    "timestamp": "2026-04-02T09:30:15Z",
+    "level": "ERROR",
+    "service": "service-a",
+    "message": "HikariPool-1 - Connection is not available, request timed out after 30000ms"
+  },
+  {
+    "timestamp": "2026-04-02T09:30:30Z",
+    "level": "ERROR",
+    "service": "service-b",
+    "message": "Upstream service-a returning HTTP 503 on /api/orders endpoint"
   }
 ]

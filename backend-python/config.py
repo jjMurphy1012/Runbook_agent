@@ -5,7 +5,12 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     openai_api_key: str = "sk-placeholder"
-    langsmith_tracing: bool = True
+    llm_model: str = "gpt-4o-mini"
+    llm_temperature: float = 0.2
+    embedding_model: str = "text-embedding-3-small"
+    embedding_dim: int = 1536
+
+    langsmith_tracing: bool = False
     langsmith_api_key: str = "lsv2-placeholder"
     langsmith_project: str = "runbook-agent"
 
@@ -31,6 +36,14 @@ class Settings(BaseSettings):
     @property
     def redis_url(self) -> str:
         return f"redis://{self.redis_host}:{self.redis_port}/0"
+
+    @property
+    def langsmith_enabled(self) -> bool:
+        return (
+            self.langsmith_tracing
+            and self.langsmith_api_key.startswith("lsv2_")
+            and not self.langsmith_api_key.endswith("placeholder")
+        )
 
 
 settings = Settings()

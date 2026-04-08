@@ -33,6 +33,7 @@ services:
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       JWT_SECRET: ${JWT_SECRET:-replace-me}
+      PYTHON_SERVICE_URL: ${PYTHON_SERVICE_URL:-http://backend-python:8000}
     depends_on:
       - postgres
       - redis
@@ -41,11 +42,12 @@ services:
 
   backend-python:
     build:
-      context: ./backend-python
+      context: .
+      dockerfile: backend-python/Dockerfile
     container_name: runbook-python
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-placeholder}
-      LANGSMITH_TRACING: ${LANGSMITH_TRACING:-true}
+      LANGSMITH_TRACING: ${LANGSMITH_TRACING:-false}
       LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-lsv2-placeholder}
       LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-runbook-agent}
       POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
@@ -63,15 +65,17 @@ services:
     ports:
       - "8000:8000"
 
-  frontend:
-    build:
-      context: ./frontend
-    container_name: runbook-frontend
-    depends_on:
-      - backend-java
-      - backend-python
-    ports:
-      - "3000:3000"
+  # frontend:
+  #   Frontend runs locally via `cd frontend && npm run dev` until a Dockerfile is added.
+  #   Uncomment and supply frontend/Dockerfile when containerizing the UI.
+  #   build:
+  #     context: ./frontend
+  #   container_name: runbook-frontend
+  #   depends_on:
+  #     - backend-java
+  #     - backend-python
+  #   ports:
+  #     - "3000:3000"
 
 volumes:
   postgres_data:
