@@ -36,6 +36,10 @@ Redis is NOT used for session storage. API auth is stateless JWT — no Spring S
 
 When contributing, document any new Redis key pattern in the PR that introduces it. See `CLAUDE.md` for detailed key patterns and the full Redis strategy.
 
+## Agent Workflow Notes
+
+When the Codex context window indicator drops to roughly 30%, compact the conversation context before continuing. Preserve the current goal, decisions already made, files changed, open bugs, validation results, and the next concrete steps so the next turn can resume without re-discovery.
+
 ## Security & Configuration Tips
 
 Never commit `.env`, OpenAI keys, JWT secrets, or LangSmith credentials. Keep command execution simulated; do not introduce unrestricted shell execution into the agent tool layer. Document every new Redis key, database table, and MCP tool in the same PR that adds it.
