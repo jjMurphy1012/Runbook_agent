@@ -1,12 +1,19 @@
 package com.runbookagent.controller;
 
+import com.runbookagent.util.JwtUtil;
 import java.io.IOException;
 import java.util.Map;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -15,13 +22,30 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class StreamController {
 
     private final StringRedisTemplate redisTemplate;
+    private final JwtUtil jwtUtil;
 
-    public StreamController(StringRedisTemplate redisTemplate) {
+    public StreamController(StringRedisTemplate redisTemplate, JwtUtil jwtUtil) {
         this.redisTemplate = redisTemplate;
+        this.jwtUtil = jwtUtil;
+    }
+
+    @PostMapping("/token/{alertId}")
+    public ResponseEntity<Map<String, String>> issueStreamToken(@PathVariable String alertId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            throw new AccessDeniedException("authentication required");
+        }
+        String token = jwtUtil.generateStreamToken(auth.getName(), alertId);
+        return ResponseEntity.ok(Map.of("token", token));
     }
 
     @GetMapping(value = "/{alertId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter streamAlertEvents(@PathVariable String alertId) {
+    public SseEmitter streamAlertEvents(
+            @PathVariable String alertId,
+            @RequestParam("token") String token) {
+        if (!jwtUtil.isValidStreamToken(token, alertId)) {
+            throw new AccessDeniedException("invalid or expired stream token");
+        }
         SseEmitter emitter = new SseEmitter(120000L);
         String streamKey = "alerts:" + alertId + ":events";
 

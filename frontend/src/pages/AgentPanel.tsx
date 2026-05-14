@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { apiClient } from "../api/client";
 import SSELogViewer from "../components/SSELogViewer";
 import { useSSE } from "../hooks/useSSE";
 
@@ -6,7 +8,31 @@ type AgentPanelProps = {
 };
 
 export default function AgentPanel({ alertId }: AgentPanelProps) {
-  const sseUrl = alertId ? `http://localhost:8080/api/stream/${alertId}` : null;
+  const [sseUrl, setSseUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!alertId) {
+      setSseUrl(null);
+      return;
+    }
+    let cancelled = false;
+    apiClient
+      .post<{ token: string }>(`/stream/token/${alertId}`)
+      .then((res) => {
+        if (!cancelled) {
+          setSseUrl(
+            `http://localhost:8080/api/stream/${alertId}?token=${encodeURIComponent(res.data.token)}`,
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setSseUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [alertId]);
+
   const { messages, connected, clear } = useSSE(sseUrl);
 
   return (

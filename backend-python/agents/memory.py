@@ -2,7 +2,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select, text
+from sqlalchemy import literal_column, select, text
 
 from agents.state import AgentState
 from db.database import get_session
@@ -30,9 +30,9 @@ async def read_similar_incidents(
             IncidentHistory.diagnosis,
             IncidentHistory.root_cause,
             IncidentHistory.outcome,
-            text(
-                f"1 - (embedding <=> '{embedding_literal}'::vector) AS similarity"
-            ),
+            literal_column(
+                f"1 - (embedding <=> '{embedding_literal}'::vector)"
+            ).label("similarity"),
         )
         .where(IncidentHistory.human_verified.is_(True))
         .order_by(text(f"embedding <=> '{embedding_literal}'::vector"))

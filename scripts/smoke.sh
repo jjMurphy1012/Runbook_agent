@@ -50,9 +50,15 @@ FP=$(echo "$ALERT_JSON" | jq -r .fingerprint)
 [[ -n "$ALERT_ID" && "$ALERT_ID" != "null" ]] || { echo "create FAIL: $ALERT_JSON"; exit 1; }
 echo "PASS  id=$ALERT_ID fingerprint=$FP"
 
-step "open SSE (no auth header — endpoint is permitAll)"
+step "obtain stream token (5-min TTL, scoped to this alertId)"
+STREAM_TOKEN=$(curl -fsS -X POST "$JAVA_URL/api/stream/token/$ALERT_ID" \
+  -H "Authorization: Bearer $TOKEN" | jq -r .token)
+[[ -n "$STREAM_TOKEN" && "$STREAM_TOKEN" != "null" ]] || { echo "stream token FAIL"; exit 1; }
+echo "PASS  stream_token=${STREAM_TOKEN:0:24}..."
+
+step "open SSE (no Authorization; token in query string)"
 SSE_OUT=$(mktemp)
-curl -fsS -N --max-time 8 "$JAVA_URL/api/stream/$ALERT_ID" > "$SSE_OUT" &
+curl -fsS -N --max-time 8 "$JAVA_URL/api/stream/$ALERT_ID?token=$STREAM_TOKEN" > "$SSE_OUT" &
 SSE_PID=$!
 sleep 1
 
