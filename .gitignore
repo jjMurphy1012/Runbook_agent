@@ -2,6 +2,13 @@
 node_modules/
 dist/
 
+# Frontend tsc / vite generated outputs (tsconfig.node.json's composite mode
+# emits .d.ts and .js next to the source vite.config.ts; tsbuildinfo is the
+# incremental build cache).
+frontend/*.tsbuildinfo
+frontend/vite.config.d.ts
+frontend/vite.config.js
+
 # Python
 __pycache__/
 .pytest_cache/
