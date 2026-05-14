@@ -2,6 +2,7 @@ import json
 
 from langchain_openai import ChatOpenAI
 
+from agents.llm import llm_invoke
 from agents.state import AgentState
 from agents.utils import emit_event, parse_llm_json
 from config import settings
@@ -38,7 +39,7 @@ async def remediation_node(state: AgentState) -> dict:
         root_cause=state.get("root_cause", "Unknown"),
         scenario=scenario,
     )
-    response = await _llm.ainvoke(prompt)
+    response = await llm_invoke(_llm, prompt)
 
     result = parse_llm_json(response.content, fallback={
         "actions": [

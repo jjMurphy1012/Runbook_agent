@@ -1,7 +1,7 @@
 # RunbookAgent Plan
 
 > Source of truth for project-level progress. Read at session start and update when finishing a stage.
-> Last updated: 2026-05-14 (P0 done: frontend build ✅, mvn test ✅ (4/4), end-to-end smoke ALL PASS with real LLM, alert reached RESOLVED)
+> Last updated: 2026-05-14 (P0 done + P1-B done: rate_limiter wired into all 8 LLM call sites; smoke ALL PASS and cache-hit branch verified)
 
 ## Current state (audited)
 
@@ -34,7 +34,7 @@ Main pipeline is wired end-to-end in code, but local verification has gaps: fron
 
 ## P1 (security + correctness)
 
-- [ ] Wire `rate_limiter.allow_request()` in front of all LLM calls — currently defined but unused (`backend-python/cache/rate_limiter.py:10`)
+- [x] Wire `rate_limiter.allow_request()` in front of all LLM calls — added `agents/llm.py:llm_invoke()` wrapper; replaced 8 `_llm.ainvoke()` sites in triage / diagnostic / reflection (analyzer+critic+finalizer) / remediation / postmortem. Backs off 1s and retries up to 60s, then raises `LLMRateLimitExceeded`. Smoke re-run still ALL PASS (and incidentally verified triage cache-hit branch — second run hit `cache_hit: true`).
 - [ ] Replace SSE `permitAll` with a short-lived stream token; improve `StreamController.java:28` per-connection thread/polling and resume semantics (`backend-java/src/main/java/com/runbookagent/config/SecurityConfig.java:29`)
 - [ ] Make seed scripts idempotent (upsert by title / rule_name / fingerprint)
 - [ ] Minimal test set — Java AlertService + RunbookService; Python fingerprint + triage cache-hit + RAG fusion; frontend Login + Dashboard + SSE hook

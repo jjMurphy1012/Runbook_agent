@@ -3,6 +3,7 @@ import json
 
 from langchain_openai import ChatOpenAI
 
+from agents.llm import llm_invoke
 from agents.state import AgentState
 from agents.utils import emit_event, parse_llm_json
 from config import settings
@@ -78,7 +79,7 @@ async def diagnostic_node(state: AgentState) -> dict:
         runbooks=runbook_texts[:2000],
     )
 
-    response = await _llm.ainvoke(prompt)
+    response = await llm_invoke(_llm, prompt)
     result = parse_llm_json(response.content, fallback={
         "diagnosis": response.content,
         "root_cause": "Unable to parse structured diagnosis",

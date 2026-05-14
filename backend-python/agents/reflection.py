@@ -2,6 +2,7 @@ import json
 
 from langchain_openai import ChatOpenAI
 
+from agents.llm import llm_invoke
 from agents.state import AgentState
 from agents.utils import emit_event, parse_llm_json
 from config import settings
@@ -114,7 +115,7 @@ async def reflection_node(state: AgentState) -> dict:
                 else ""
             ),
         )
-        analyzer_resp = await _llm.ainvoke(analyzer_prompt)
+        analyzer_resp = await llm_invoke(_llm, analyzer_prompt)
         analysis = parse_llm_json(analyzer_resp.content, fallback={
             "analysis": analyzer_resp.content,
             "root_cause": "Parse error",
@@ -142,7 +143,7 @@ async def reflection_node(state: AgentState) -> dict:
             metrics=metrics,
             analysis=json.dumps(analysis, indent=2),
         )
-        critic_resp = await _llm.ainvoke(critic_prompt)
+        critic_resp = await llm_invoke(_llm, critic_prompt)
         critique = parse_llm_json(critic_resp.content, fallback={
             "issues": [],
             "has_major_issues": False,
@@ -172,7 +173,7 @@ async def reflection_node(state: AgentState) -> dict:
         alert_json=json.dumps(alert, indent=2),
         rounds_json=json.dumps(rounds, indent=2)[:4000],
     )
-    finalizer_resp = await _llm.ainvoke(finalizer_prompt)
+    finalizer_resp = await llm_invoke(_llm, finalizer_prompt)
     final = parse_llm_json(finalizer_resp.content, fallback={
         "diagnosis": finalizer_resp.content,
         "root_cause": rounds[-1]["analyzer"].get("root_cause", "")

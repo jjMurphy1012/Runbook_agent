@@ -3,6 +3,7 @@ import json
 from langchain_openai import ChatOpenAI
 
 from agents.fingerprint import compute_fingerprint as _compute_fingerprint
+from agents.llm import llm_invoke
 from agents.state import AgentState
 from agents.utils import emit_event, parse_llm_json
 from cache.diagnosis_cache import read_cache
@@ -49,7 +50,7 @@ async def triage_node(state: AgentState) -> dict:
         return result
 
     prompt = TRIAGE_PROMPT.format(alert_json=json.dumps(alert, indent=2))
-    response = await _llm.ainvoke(prompt)
+    response = await llm_invoke(_llm, prompt)
 
     result = parse_llm_json(response.content, fallback={
         "category": alert.get("category", "unknown"),

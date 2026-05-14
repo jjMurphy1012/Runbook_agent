@@ -2,6 +2,7 @@ import json
 
 from langchain_openai import ChatOpenAI
 
+from agents.llm import llm_invoke
 from agents.memory import write_incident
 from agents.state import AgentState
 from agents.utils import emit_event
@@ -40,7 +41,7 @@ async def postmortem_node(state: AgentState) -> dict:
         root_cause=state.get("root_cause", ""),
         actions=json.dumps(state.get("remediation_actions", []), indent=2)[:3000],
     )
-    response = await _llm.ainvoke(prompt)
+    response = await llm_invoke(_llm, prompt)
     runbook_content = response.content
 
     title = f"Runbook: {alert.get('rule_name', 'incident')}"
