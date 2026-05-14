@@ -1,7 +1,7 @@
 # RunbookAgent Plan
 
 > Source of truth for project-level progress. Read at session start and update when finishing a stage.
-> Last updated: 2026-05-14 (P0 done; P1-B/C/D done; P1 minimal test set done: Java 7/7, Python 11/11. Frontend tests deferred for lack of test infra.)
+> Last updated: 2026-05-14 (P0 done; P1 done: rate limiter, SSE token, idempotent seeds, tests Java 7/7 + Python 11/11 + Frontend 11/11)
 
 ## Current state (audited)
 
@@ -39,9 +39,9 @@ Main pipeline is wired end-to-end in code, but local verification has gaps: fron
 - [x] Make seed scripts idempotent — `seed_data` skips on existing fingerprint; `seed_runbooks` skips on existing title; `seed_incidents` skips on existing `root_cause` (fingerprint not unique for two mysql seeds). Verified twice in container: first run inserted=3/4/4, second run skipped=3/4/4. Also fixed sys.path so scripts work both in container (`/app/agents`) and on host (`<repo>/backend-python/agents`).
 - [x] Minimal test set — Java AlertService (fingerprint + null labels) + RunbookService (approve flips human_verified via native query). Python fingerprint parity (4 cases, hashes match Java FingerprintUtilParityTest), triage cache-hit branch (flattened diagnosis + cache-miss falls through to llm_invoke), RAG fusion (single list order, intersection ranks higher, formula, empty input). Java 7/7 pass; Python 11/11 pass. Frontend test infra not yet set up; deferred as separate task.
 
-## P1 deferred
+## P1 deferred (now done)
 
-- [ ] Frontend test set — needs vitest + @testing-library/react infra (not yet present). Targets: Login form, Dashboard alert list, useSSE hook.
+- [x] Frontend test set — installed vitest + @testing-library/react + jsdom + user-event. Wrote LoginPage (submit / error / register toggle), DashboardPage (render alerts / empty on error / Run Agent triggers + selects), and useSSE hook (null url skip, open + stage event accumulation, complete closes, error closes, unmount closes). `npm test` 11/11 pass.
 
 ## P2 (perf + housekeeping)
 
