@@ -1,6 +1,8 @@
 """Seed verified incident history for cold start.
 
-These hand-written cases give Incident Memory non-trivial behavior from day one.
+Idempotent: re-running skips records whose root_cause already exists
+(root_cause is unique across seed cases; alert_fingerprint is not,
+since two mysql_pool_exhausted seeds share the same labels-less hash).
 Usage: docker-compose exec backend-python python scripts/seed_incidents.py
 """
 
@@ -11,7 +13,13 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend-python"))
+_root = Path(__file__).resolve().parents[1]
+for _candidate in (_root / "backend-python", _root):
+    if (_candidate / "agents").is_dir():
+        sys.path.insert(0, str(_candidate))
+        break
+
+from sqlalchemy import select
 
 from agents.fingerprint import compute_fingerprint
 from db.database import get_session
@@ -87,19 +95,31 @@ SEED_INCIDENTS = [
 
 
 async def main() -> None:
-    payload_texts = [
-        json.dumps(inc["alert_payload"], sort_keys=True) for inc in SEED_INCIDENTS
-    ]
-    try:
-        embeddings = await embed_texts(payload_texts)
-    except Exception as e:
-        print(f"Embedding generation failed: {e}")
-        print("Seeding incidents without embeddings.")
-        embeddings = [None] * len(SEED_INCIDENTS)
-
     async with get_session() as session:
-        for i, inc in enumerate(SEED_INCIDENTS):
-            record = IncidentHistory(
+        existing = set((await session.scalars(
+            select(IncidentHistory.root_cause)
+        )).all())
+        to_insert = [
+            inc for inc in SEED_INCIDENTS if inc["root_cause"] not in existing
+        ]
+        skipped = len(SEED_INCIDENTS) - len(to_insert)
+
+        if not to_insert:
+            print(f"Seeded incidents: inserted=0 skipped={skipped}")
+            return
+
+        payload_texts = [
+            json.dumps(inc["alert_payload"], sort_keys=True) for inc in to_insert
+        ]
+        try:
+            embeddings = await embed_texts(payload_texts)
+        except Exception as e:
+            print(f"Embedding generation failed: {e}")
+            print("Seeding incidents without embeddings.")
+            embeddings = [None] * len(to_insert)
+
+        for i, inc in enumerate(to_insert):
+            session.add(IncidentHistory(
                 id=uuid.uuid4(),
                 alert_fingerprint=compute_fingerprint(
                     inc["rule_name"], inc["alert_payload"].get("labels", {})
@@ -114,10 +134,9 @@ async def main() -> None:
                 human_verified=True,
                 embedding=embeddings[i],
                 created_at=datetime.now(timezone.utc),
-            )
-            session.add(record)
+            ))
 
-    print(f"Seeded {len(SEED_INCIDENTS)} verified incident history records.")
+    print(f"Seeded incidents: inserted={len(to_insert)} skipped={skipped}")
 
 
 if __name__ == "__main__":

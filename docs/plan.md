@@ -36,7 +36,7 @@ Main pipeline is wired end-to-end in code, but local verification has gaps: fron
 
 - [x] Wire `rate_limiter.allow_request()` in front of all LLM calls — added `agents/llm.py:llm_invoke()` wrapper; replaced 8 `_llm.ainvoke()` sites in triage / diagnostic / reflection (analyzer+critic+finalizer) / remediation / postmortem. Backs off 1s and retries up to 60s, then raises `LLMRateLimitExceeded`. Smoke re-run still ALL PASS (and incidentally verified triage cache-hit branch — second run hit `cache_hit: true`).
 - [ ] Replace SSE `permitAll` with a short-lived stream token; improve `StreamController.java:28` per-connection thread/polling and resume semantics (`backend-java/src/main/java/com/runbookagent/config/SecurityConfig.java:29`)
-- [ ] Make seed scripts idempotent (upsert by title / rule_name / fingerprint)
+- [x] Make seed scripts idempotent — `seed_data` skips on existing fingerprint; `seed_runbooks` skips on existing title; `seed_incidents` skips on existing `root_cause` (fingerprint not unique for two mysql seeds). Verified twice in container: first run inserted=3/4/4, second run skipped=3/4/4. Also fixed sys.path so scripts work both in container (`/app/agents`) and on host (`<repo>/backend-python/agents`).
 - [ ] Minimal test set — Java AlertService + RunbookService; Python fingerprint + triage cache-hit + RAG fusion; frontend Login + Dashboard + SSE hook
 
 ## P2 (perf + housekeeping)

@@ -1,5 +1,6 @@
 """Seed alerts into the database for the local demo.
 
+Idempotent: re-running skips alerts whose fingerprint already exists.
 Usage: docker-compose exec backend-python python scripts/seed_data.py
 """
 
@@ -9,7 +10,13 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend-python"))
+_root = Path(__file__).resolve().parents[1]
+for _candidate in (_root / "backend-python", _root):
+    if (_candidate / "agents").is_dir():
+        sys.path.insert(0, str(_candidate))
+        break
+
+from sqlalchemy import select
 
 from agents.fingerprint import compute_fingerprint
 from db.database import get_session
@@ -44,13 +51,22 @@ SEED_ALERTS = [
 
 
 async def main() -> None:
+    inserted = 0
+    skipped = 0
     async with get_session() as session:
         for alert_data in SEED_ALERTS:
-            alert = Alert(
+            fingerprint = compute_fingerprint(
+                alert_data["rule_name"], alert_data["labels"]
+            )
+            existing = await session.scalar(
+                select(Alert.id).where(Alert.fingerprint == fingerprint)
+            )
+            if existing:
+                skipped += 1
+                continue
+            session.add(Alert(
                 id=uuid.uuid4(),
-                fingerprint=compute_fingerprint(
-                    alert_data["rule_name"], alert_data["labels"]
-                ),
+                fingerprint=fingerprint,
                 rule_name=alert_data["rule_name"],
                 category=alert_data["category"],
                 severity=alert_data["severity"],
@@ -58,9 +74,9 @@ async def main() -> None:
                 message=alert_data["message"],
                 labels=alert_data["labels"],
                 created_at=datetime.now(timezone.utc),
-            )
-            session.add(alert)
-    print(f"Seeded {len(SEED_ALERTS)} alerts.")
+            ))
+            inserted += 1
+    print(f"Seeded alerts: inserted={inserted} skipped={skipped}")
 
 
 if __name__ == "__main__":
