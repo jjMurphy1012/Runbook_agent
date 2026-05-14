@@ -9,7 +9,11 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "alerts")
@@ -37,6 +41,10 @@ public class Alert {
 
     @Column(columnDefinition = "TEXT")
     private String message;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    private Map<String, String> labels = new LinkedHashMap<>();
 
     @Column(nullable = false)
     private Instant createdAt = Instant.now();
@@ -95,6 +103,14 @@ public class Alert {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public Map<String, String> getLabels() {
+        return labels;
+    }
+
+    public void setLabels(Map<String, String> labels) {
+        this.labels = labels == null ? new LinkedHashMap<>() : labels;
     }
 
     public Instant getCreatedAt() {

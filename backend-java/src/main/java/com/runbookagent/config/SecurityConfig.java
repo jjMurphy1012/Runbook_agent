@@ -26,6 +26,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/*/health").permitAll()
+                        // EventSource cannot send Authorization headers; the
+                        // stream is read-only and keyed by alert id. Gate it
+                        // with a short-lived stream token in a follow-up.
+                        .requestMatchers("/api/stream/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

@@ -1,8 +1,8 @@
-import hashlib
 import json
 
 from langchain_openai import ChatOpenAI
 
+from agents.fingerprint import compute_fingerprint as _compute_fingerprint
 from agents.state import AgentState
 from agents.utils import emit_event, parse_llm_json
 from cache.diagnosis_cache import read_cache
@@ -24,12 +24,7 @@ Respond in JSON with these fields:
 
 
 def compute_fingerprint(alert: dict) -> str:
-    """Deterministic fingerprint from rule_name + labels."""
-    key_parts = [
-        alert.get("rule_name", ""),
-        json.dumps(alert.get("labels", {}), sort_keys=True),
-    ]
-    return hashlib.sha256("|".join(key_parts).encode()).hexdigest()[:32]
+    return _compute_fingerprint(alert.get("rule_name", ""), alert.get("labels", {}))
 
 
 async def triage_node(state: AgentState) -> dict:
@@ -46,7 +41,8 @@ async def triage_node(state: AgentState) -> dict:
             "severity": cached.get("severity", "MEDIUM"),
             "ambiguity_score": cached.get("ambiguity_score", 0.5),
             "cache_hit": True,
-            "cached_diagnosis": cached,
+            "diagnosis": cached.get("diagnosis", ""),
+            "root_cause": cached.get("root_cause", ""),
             "current_stage": "triage",
         }
         await emit_event(state, "triage", {"cache_hit": True, **result})
@@ -69,7 +65,6 @@ async def triage_node(state: AgentState) -> dict:
         "severity": result.get("severity", "MEDIUM"),
         "ambiguity_score": result.get("ambiguity_score", 0.5),
         "cache_hit": False,
-        "cached_diagnosis": None,
         "use_reflection": (
             result.get("severity") in ("HIGH", "CRITICAL")
             or result.get("ambiguity_score", 0) > 0.5

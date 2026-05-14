@@ -13,7 +13,6 @@ class AgentState(TypedDict, total=False):
     severity: str
     ambiguity_score: float
     cache_hit: bool
-    cached_diagnosis: dict | None
 
     # Evidence collected by diagnostic
     logs: list[dict]

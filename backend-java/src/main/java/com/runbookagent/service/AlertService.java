@@ -5,9 +5,9 @@ import com.runbookagent.dto.AlertResponse;
 import com.runbookagent.model.Alert;
 import com.runbookagent.model.AlertStatus;
 import com.runbookagent.repository.AlertRepository;
-import java.security.MessageDigest;
+import com.runbookagent.util.FingerprintUtil;
 import java.time.Instant;
-import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -32,7 +32,10 @@ public class AlertService {
     }
 
     public AlertResponse createAlert(AlertRequest request) {
-        String fingerprint = computeFingerprint(request.ruleName());
+        Map<String, String> labels = request.labels() == null
+                ? new LinkedHashMap<>()
+                : new LinkedHashMap<>(request.labels());
+        String fingerprint = FingerprintUtil.compute(request.ruleName(), labels);
 
         Alert alert = new Alert();
         alert.setId(UUID.randomUUID());
@@ -42,6 +45,7 @@ public class AlertService {
         alert.setSeverity(request.severity());
         alert.setStatus(AlertStatus.PENDING);
         alert.setMessage(request.message());
+        alert.setLabels(labels);
         alert.setCreatedAt(Instant.now());
 
         alert = alertRepository.save(alert);
@@ -65,7 +69,7 @@ public class AlertService {
                         "category", alert.getCategory(),
                         "severity", alert.getSeverity(),
                         "message", alert.getMessage() != null ? alert.getMessage() : "",
-                        "labels", Map.of()
+                        "labels", alert.getLabels()
                 ))
                 .retrieve()
                 .bodyToMono(Map.class)
@@ -100,17 +104,8 @@ public class AlertService {
                 alert.getSeverity(),
                 alert.getStatus().name(),
                 alert.getMessage(),
+                alert.getLabels(),
                 alert.getCreatedAt()
         );
-    }
-
-    private String computeFingerprint(String ruleName) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(ruleName.getBytes());
-            return HexFormat.of().formatHex(hash).substring(0, 32);
-        } catch (Exception e) {
-            return ruleName.hashCode() + "";
-        }
     }
 }

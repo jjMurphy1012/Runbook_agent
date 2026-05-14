@@ -13,13 +13,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend-python"))
 
+from agents.fingerprint import compute_fingerprint
 from db.database import get_session
 from db.models import IncidentHistory
 from rag.embeddings import embed_texts
 
 SEED_INCIDENTS = [
     {
-        "alert_fingerprint": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
         "rule_name": "mysql_pool_exhausted",
         "category": "database",
         "severity": "HIGH",
@@ -36,7 +36,6 @@ SEED_INCIDENTS = [
         "outcome": "resolved",
     },
     {
-        "alert_fingerprint": "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5",
         "rule_name": "cpu_high_load",
         "category": "compute",
         "severity": "HIGH",
@@ -53,7 +52,6 @@ SEED_INCIDENTS = [
         "outcome": "resolved",
     },
     {
-        "alert_fingerprint": "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6",
         "rule_name": "disk_space_critical",
         "category": "storage",
         "severity": "CRITICAL",
@@ -70,7 +68,6 @@ SEED_INCIDENTS = [
         "outcome": "resolved",
     },
     {
-        "alert_fingerprint": "d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1",
         "rule_name": "mysql_pool_exhausted",
         "category": "database",
         "severity": "HIGH",
@@ -104,7 +101,9 @@ async def main() -> None:
         for i, inc in enumerate(SEED_INCIDENTS):
             record = IncidentHistory(
                 id=uuid.uuid4(),
-                alert_fingerprint=inc["alert_fingerprint"],
+                alert_fingerprint=compute_fingerprint(
+                    inc["rule_name"], inc["alert_payload"].get("labels", {})
+                ),
                 rule_name=inc["rule_name"],
                 category=inc["category"],
                 severity=inc["severity"],

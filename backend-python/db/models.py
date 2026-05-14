@@ -29,6 +29,7 @@ class Alert(Base):
     severity: Mapped[str] = mapped_column(String(10))
     status: Mapped[str] = mapped_column(String(20))
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    labels: Mapped[dict] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
