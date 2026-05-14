@@ -24,3 +24,4 @@ server:
 app:
   jwt-secret: ${JWT_SECRET:replace-me}
   python-service-url: ${PYTHON_SERVICE_URL:http://localhost:8000}
+  cors-origins: ${APP_CORS_ORIGINS:http://localhost:3000}

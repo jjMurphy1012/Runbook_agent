@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { apiClient } from "../api/client";
+import { apiClient, API_BASE_URL } from "../api/client";
 import SSELogViewer from "../components/SSELogViewer";
 import { useSSE } from "../hooks/useSSE";
 
@@ -21,7 +21,7 @@ export default function AgentPanel({ alertId }: AgentPanelProps) {
       .then((res) => {
         if (!cancelled) {
           setSseUrl(
-            `http://localhost:8080/api/stream/${alertId}?token=${encodeURIComponent(res.data.token)}`,
+            `${API_BASE_URL}/api/stream/${alertId}?token=${encodeURIComponent(res.data.token)}`,
           );
         }
       })
