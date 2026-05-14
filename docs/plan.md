@@ -1,7 +1,7 @@
 # RunbookAgent Plan
 
 > Source of truth for project-level progress. Read at session start and update when finishing a stage.
-> Last updated: 2026-05-14 (P0 done + P1-B/C/D done: rate limiter wired, SSE stream-token gating, idempotent seeds; smoke ALL PASS post-fix)
+> Last updated: 2026-05-14 (P0 done; P1-B/C/D done; P1 minimal test set done: Java 7/7, Python 11/11. Frontend tests deferred for lack of test infra.)
 
 ## Current state (audited)
 
@@ -37,7 +37,11 @@ Main pipeline is wired end-to-end in code, but local verification has gaps: fron
 - [x] Wire `rate_limiter.allow_request()` in front of all LLM calls — added `agents/llm.py:llm_invoke()` wrapper; replaced 8 `_llm.ainvoke()` sites in triage / diagnostic / reflection (analyzer+critic+finalizer) / remediation / postmortem. Backs off 1s and retries up to 60s, then raises `LLMRateLimitExceeded`. Smoke re-run still ALL PASS (and incidentally verified triage cache-hit branch — second run hit `cache_hit: true`).
 - [x] Replace SSE `permitAll` with a short-lived stream token. `POST /api/stream/token/{alertId}` (JWT-protected) issues a 5-minute token bound to the alertId via an `aid` claim. `GET /api/stream/{alertId}?token=...` validates the token before opening the SSE. SecurityConfig now allows only `GET /api/stream/*`; the token POST falls into `anyRequest().authenticated()`. Frontend `AgentPanel` fetches the stream token then builds the EventSource URL. Smoke still ALL PASS. Per-connection thread/polling rewrite still deferred — separate work.
 - [x] Make seed scripts idempotent — `seed_data` skips on existing fingerprint; `seed_runbooks` skips on existing title; `seed_incidents` skips on existing `root_cause` (fingerprint not unique for two mysql seeds). Verified twice in container: first run inserted=3/4/4, second run skipped=3/4/4. Also fixed sys.path so scripts work both in container (`/app/agents`) and on host (`<repo>/backend-python/agents`).
-- [ ] Minimal test set — Java AlertService + RunbookService; Python fingerprint + triage cache-hit + RAG fusion; frontend Login + Dashboard + SSE hook
+- [x] Minimal test set — Java AlertService (fingerprint + null labels) + RunbookService (approve flips human_verified via native query). Python fingerprint parity (4 cases, hashes match Java FingerprintUtilParityTest), triage cache-hit branch (flattened diagnosis + cache-miss falls through to llm_invoke), RAG fusion (single list order, intersection ranks higher, formula, empty input). Java 7/7 pass; Python 11/11 pass. Frontend test infra not yet set up; deferred as separate task.
+
+## P1 deferred
+
+- [ ] Frontend test set — needs vitest + @testing-library/react infra (not yet present). Targets: Login form, Dashboard alert list, useSSE hook.
 
 ## P2 (perf + housekeeping)
 
