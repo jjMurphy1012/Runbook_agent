@@ -1,7 +1,7 @@
 # RunbookAgent Plan
 
 > Source of truth for project-level progress. Read at session start and update when finishing a stage.
-> Last updated: 2026-05-14 (P0 done; P1 done: rate limiter, SSE token, idempotent seeds, tests Java 7/7 + Python 11/11 + Frontend 11/11)
+> Last updated: 2026-05-14 (P0 + P1 + P2 done. Verified: smoke ALL PASS, Java 7/7, Python 11/11, Frontend 11/11, Flyway V5 applied, healthchecks gating depends_on.)
 
 ## Current state (audited)
 
@@ -45,9 +45,9 @@ Main pipeline is wired end-to-end in code, but local verification has gaps: fron
 
 ## P2 (perf + housekeeping)
 
-- [ ] Persist tsvector column + GIN index; remove runtime `to_tsvector` (`backend-python/rag/bm25_search.py:8`)
-- [ ] Docker healthchecks; drop obsolete compose `version` field
-- [ ] Reconcile README/AGENTS references to `./mvnw` — no Maven Wrapper in repo
+- [x] Persist tsvector column + GIN index — Flyway V5 adds `search_vector` as a `GENERATED ALWAYS ... STORED` tsvector column on `runbook_embeddings`, plus a GIN index. `bm25_search.py` now queries the persisted column instead of computing `to_tsvector` per row at query time.
+- [x] Docker healthchecks + drop obsolete `version` field — every service has a healthcheck (`pg_isready`, `redis-cli ping`, `/api/auth/health`, `/health`). `depends_on` now uses `condition: service_healthy` so backends only start after infra is ready.
+- [x] AGENTS.md `./mvnw` reference removed; clarified that `mvn test` requires Docker daemon for Testcontainers. README had no `mvnw` references.
 
 ## Stages 2–5 status snapshot
 

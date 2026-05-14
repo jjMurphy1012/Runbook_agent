@@ -4,14 +4,13 @@ from db.database import get_session
 
 
 async def bm25_search(query: str, top_k: int = 5) -> list[dict]:
-    """Full-text search using PostgreSQL tsvector + tsquery with ts_rank."""
+    """Full-text search using the persisted tsvector column + GIN index."""
     sql = text("""
         SELECT re.id, re.runbook_id, re.chunk_text,
-               ts_rank(to_tsvector('english', re.chunk_text),
-                        plainto_tsquery('english', :query)) AS score
+               ts_rank(re.search_vector,
+                       plainto_tsquery('english', :query)) AS score
         FROM runbook_embeddings re
-        WHERE to_tsvector('english', re.chunk_text) @@
-              plainto_tsquery('english', :query)
+        WHERE re.search_vector @@ plainto_tsquery('english', :query)
         ORDER BY score DESC
         LIMIT :top_k
     """)

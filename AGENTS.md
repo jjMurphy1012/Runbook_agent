@@ -6,7 +6,7 @@ This repository is planned as a three-service application plus shared data. Keep
 
 ## Build, Test, and Development Commands
 
-Use `docker-compose up -d` to start the full local stack. Run Java tests with `cd backend-java && ./mvnw test` or `mvn test`. Run Python tests with `docker-compose exec backend-python pytest -v`. Seed demo data with `docker-compose exec backend-python python scripts/seed_data.py`, `docker-compose exec backend-python python scripts/seed_runbooks.py`, and `docker-compose exec backend-python python scripts/seed_incidents.py`. Check retrieval quality with `docker-compose exec backend-python python scripts/test_rag.py`. Start the frontend locally with `cd frontend && npm run dev`.
+Use `docker compose up -d` to start the full local stack. Run Java tests with `cd backend-java && mvn test` (requires Docker daemon for Testcontainers). Run Python tests with `docker compose exec backend-python pytest -v`. Run frontend tests with `cd frontend && npm test`. Seed demo data with `docker-compose exec backend-python python scripts/seed_data.py`, `docker-compose exec backend-python python scripts/seed_runbooks.py`, and `docker-compose exec backend-python python scripts/seed_incidents.py`. Check retrieval quality with `docker-compose exec backend-python python scripts/test_rag.py`. Start the frontend locally with `cd frontend && npm run dev`.
 
 ## Coding Style & Naming Conventions
 
